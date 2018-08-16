@@ -114,13 +114,19 @@ void loop() {
     humidity = dht.readHumidity();
     temperature = dht.readTemperature(USE_FARENHEIT);
 
-    if (temperature == NAN
-        || humidity == NAN
+    if (isnan(temperature)
+        || isnan(humidity)
         || temperature > MAX_TEMPERATURE
         || temperature < MIN_TEMPERATURE
         || humidity > MAX_HUMIDITY
         || humidity < MIN_HUMIDITY) {
         // if any sensor failed, bail on updates
+        Serial.println("sensor failed.");
+#if PARTICLE_EVENT
+        // report to particle
+        Spark.publish(PARTICLE_EVENT_NAME, "sensor failed.", 60, PRIVATE);
+#endif
+
         failed = 1;
     } else {
         failed = 0;
@@ -140,6 +146,9 @@ void loop() {
             temperature,
             humidity,
             heatIndex);
+
+        Serial.println(payload);
+        Particle.publish("sending to funnel", payload);
         if (client.connect("funnel.soracom.io", 23080))
         {
           Serial.println("connected");
@@ -150,7 +159,7 @@ void loop() {
         }
         client.write(payload);
         digitalWrite(LEDPIN, LOW);
-        Serial.println("disconnecting.");
+        Serial.println("disconnecting");
         client.stop();
     }
 }
